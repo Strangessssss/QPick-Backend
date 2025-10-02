@@ -1,0 +1,6 @@
+@Qpick_HostAddress = http://localhost:5200
+
+GET {{Qpick_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
