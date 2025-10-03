@@ -43,5 +43,6 @@ CategoriesEndpointMapper.Map(app);
 UiEndpointMapper.Map(app);
 BrandsEndpointMapper.Map(app);
 
+
 app.Run();
 

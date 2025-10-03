@@ -33,12 +33,19 @@ public class CategoriesEndpointMapper
         return TypedResults.Ok(category);
     }
     
-    private static async Task<Results<NotFound<string>, Ok>> RemoveCategory(
+    private static async Task<Results<ForbidHttpResult, NotFound<string>, Ok>> RemoveCategory(
         AppDbContext context,
-        [FromRoute] Guid id)
+        [FromRoute] Guid id,
+        [FromBody] DeleteBrandRequest request
+    )
     {
+        if (!context.Admins.Any(a => a.Id == request.Token))
+        {
+            return TypedResults.Forbid();
+        }
+        
         var category = context.Categories.FirstOrDefault(p => p.Id == id);
-
+        
         if (category is null)
             return TypedResults.NotFound("Category not found");
         
@@ -52,7 +59,7 @@ public class CategoriesEndpointMapper
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<NotFound<string>, Ok>> AddCategory(
+    private static async Task<Results<ForbidHttpResult, NotFound<string>, Ok>> AddCategory(
         HttpContext httpContext,
         AppDbContext context)
     {
@@ -61,6 +68,15 @@ public class CategoriesEndpointMapper
             var form = await httpContext.Request.ReadFormAsync();
 
             var name = form["name"];
+            var token = form["token"];
+
+            if (Guid.TryParse(token, out var tokenGuid))
+            {
+                if (!context.Admins.Any(a => a.Id == tokenGuid))
+                {
+                    return TypedResults.Forbid();
+                }
+            }
             
             if (string.IsNullOrWhiteSpace(name))
             {

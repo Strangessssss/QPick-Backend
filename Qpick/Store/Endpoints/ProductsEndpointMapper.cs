@@ -50,10 +50,17 @@ public class ProductsEndpointMapper
         return TypedResults.Ok(product);
     }
     
-    private static async Task<Results<NotFound<string>, Ok>> RemoveProduct(
+    private static async Task<Results<ForbidHttpResult, NotFound<string>, Ok>> RemoveProduct(
         AppDbContext context,
-        [FromRoute] Guid id)
+        [FromRoute] Guid id,
+        [FromBody] DeleteBrandRequest request
+    )
     {
+        if (!context.Admins.Any(a => a.Id == request.Token))
+        {
+            return TypedResults.Forbid();
+        }
+        
         var product = context.Products.FirstOrDefault(p => p.Id == id);
 
         if (product is null)
@@ -64,9 +71,10 @@ public class ProductsEndpointMapper
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<NotFound<string>, Ok>> AddProduct(
+    private static async Task<Results<ForbidHttpResult, NotFound<string>, Ok>> AddProduct(
         HttpContext httpContext,
-        AppDbContext context)
+        AppDbContext context
+        )
     {
         try
         {
@@ -78,7 +86,16 @@ public class ProductsEndpointMapper
             var category = form["category"];
             var brand = form["brand"];
             var images = form.Files.GetFiles("images");
+            var token = form["token"];
 
+            if (Guid.TryParse(token, out var tokenGuid))
+            {
+                if (!context.Admins.Any(a => a.Id == tokenGuid))
+                {
+                    return TypedResults.Forbid();
+                }
+            }
+            
             var imagePaths = new List<string>();
             if (images.Count > 0)
             {

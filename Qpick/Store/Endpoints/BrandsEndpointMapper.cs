@@ -33,10 +33,17 @@ public class BrandsEndpointMapper
         return TypedResults.Ok(brand);
     }
     
-    private static async Task<Results<NotFound<string>, Ok>> RemoveBrand(
+    private static async Task<Results<ForbidHttpResult, NotFound<string>, Ok>> RemoveBrand(
         AppDbContext context,
-        [FromRoute] Guid id)
+        [FromRoute] Guid id,
+        [FromBody] DeleteBrandRequest request
+        )
     {
+        if (!context.Admins.Any(a => a.Id == request.Token))
+        {
+            return TypedResults.Forbid();
+        }
+        
         var brand = context.Brands.FirstOrDefault(p => p.Id == id);
 
         if (brand is null)
@@ -52,7 +59,7 @@ public class BrandsEndpointMapper
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<NotFound<string>, Ok>> AddBrand(
+    private static async Task<Results<ForbidHttpResult, NotFound<string>, Ok>> AddBrand(
         HttpContext httpContext,
         AppDbContext context)
     {
@@ -61,6 +68,15 @@ public class BrandsEndpointMapper
             var form = await httpContext.Request.ReadFormAsync();
 
             var name = form["name"];
+            var token = form["token"];
+
+            if (Guid.TryParse(token, out var tokenGuid))
+            {
+                if (!context.Admins.Any(a => a.Id == tokenGuid))
+                {
+                    return TypedResults.Forbid();
+                }
+            }
             
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -84,4 +100,9 @@ public class BrandsEndpointMapper
             throw;
         }
     }
+}
+
+internal class DeleteBrandRequest
+{
+    public Guid Token { get; set; }
 }
